@@ -1,0 +1,1608 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SLAB / CNC Cabinet Pro — Tri-View Workspace</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        fontFamily: {
+          chakra: ['"Chakra Petch"', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+          jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Chakra Petch', sans-serif; background: #06090e; color: #cbd5e1; user-select: none; overflow: hidden; height: 100vh; margin: 0; }
+  
+  /* ===== CORE ANIMATIONS ===== */
+  .crt-overlay { 
+    background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.3) 50%); 
+    background-size: 100% 4px; 
+    pointer-events: none;
+    animation: scanlineDrift 8s linear infinite;
+  }
+  @keyframes scanlineDrift {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100px; }
+  }
+  
+  .hmi-btn { 
+    background: linear-gradient(180deg, #1e2837 0%, #0d141e 100%); 
+    border: 1px solid #33445c; 
+    border-top: 1px solid #4a6282; 
+    border-bottom: 2px solid #080c13; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.6); 
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .hmi-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+  }
+  .hmi-btn:hover::before { left: 100%; }
+  .hmi-btn:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); }
+  .hmi-btn.active { 
+    background: linear-gradient(180deg, #1e3a5f 0%, #0d2340 100%); 
+    border-color: #3b82f6; 
+    color: #fff;
+    box-shadow: 0 0 12px rgba(59,130,246,0.4);
+  }
+  
+  .led { width: 8px; height: 8px; border-radius: 50%; background: #151d29; border: 1px solid #334155; }
+  .led.green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+  .led.amber { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+  .led.red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+  
+  .pulse { animation: pulse 1s infinite alternate; }
+  @keyframes pulse { 
+    0% { opacity: 0.5; transform: scale(0.9); } 
+    100% { opacity: 1; transform: scale(1.1); } 
+  }
+  
+  .glow-pulse { animation: glowPulse 2s infinite; }
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
+    50% { box-shadow: 0 0 15px currentColor, 0 0 25px currentColor; }
+  }
+  
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  .slide-in { animation: slideIn 0.3s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .tick-up { animation: tickUp 0.3s ease-out; }
+  @keyframes tickUp {
+    0% { transform: translateY(8px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  
+  .spark-burst { animation: sparkBurst 0.6s ease-out forwards; }
+  @keyframes sparkBurst {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+  }
+  
+  .boot-flicker { animation: bootFlicker 0.1s infinite; }
+  @keyframes bootFlicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  .rotate-slow { animation: rotateSlow 8s linear infinite; }
+  @keyframes rotateSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  .dash-flow { 
+    stroke-dasharray: 6 3;
+    animation: dashFlow 1s linear infinite; 
+  }
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -18; }
+  }
+  
+  .estop { 
+    background: radial-gradient(circle at 35% 35%, #ff4d5d 0%, #cc0a1f 65%, #7a000e 100%); 
+    box-shadow: 0 6px 0 #4a0008, 0 10px 15px rgba(0,0,0,0.8); 
+    border: 2px solid #ff7885; 
+    transition: all 0.15s;
+  }
+  .estop:active { transform: translateY(4px); box-shadow: 0 2px 0 #4a0008, inset 0 2px 4px rgba(0,0,0,0.8); }
+  .estop.latched { transform: translateY(4px); filter: brightness(0.7); box-shadow: 0 2px 0 #4a0008, inset 0 4px 8px rgba(0,0,0,0.9); }
+  
+  .cycle-btn { 
+    background: radial-gradient(circle at 35% 35%, #10e065 0%, #05963f 70%, #024e20 100%); 
+    box-shadow: 0 4px 0 #023616, 0 6px 12px rgba(16,224,101,0.3); 
+    border: 2px solid #5ef79d; 
+    transition: all 0.15s;
+  }
+  .cycle-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #023616; }
+  .cycle-btn.running { animation: cycleGlow 1.2s infinite alternate; }
+  @keyframes cycleGlow {
+    0% { box-shadow: 0 4px 0 #023616, 0 0 10px #10b981, inset 0 0 8px #34d399; }
+    100% { box-shadow: 0 4px 0 #023616, 0 0 25px #10e065, 0 0 40px rgba(5,150,63,0.7), inset 0 0 16px #a7f3d0; }
+  }
+  
+  .hold-btn { 
+    background: radial-gradient(circle at 35% 35%, #ffb62e 0%, #d47e00 70%, #6e4000 100%); 
+    box-shadow: 0 4px 0 #482900, 0 6px 12px rgba(245,158,11,0.3); 
+    border: 2px solid #fcd34d; 
+  }
+  .hold-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #482900; }
+  
+  .dro { font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); transition: color 0.2s; }
+  
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #070a0f; }
+  ::-webkit-scrollbar-thumb { background: #223044; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3b506e; }
+  
+  .gcode-line { padding: 2px 6px; border-radius: 2px; font-family: 'JetBrains Mono', monospace; font-size: 11px; transition: all 0.2s; }
+  .gcode-line.active { 
+    background: rgba(245, 158, 11, 0.2); 
+    border-left: 3px solid #f59e0b; 
+    color: #fde047; 
+    font-weight: 700; 
+    animation: lineFlash 0.5s ease-out;
+  }
+  @keyframes lineFlash {
+    0% { background: rgba(245, 158, 11, 0.6); }
+    100% { background: rgba(245, 158, 11, 0.2); }
+  }
+  .gcode-line.past { opacity: 0.5; color: #64748b; }
+  
+  .toggle-sw { 
+    position: relative; 
+    width: 40px; height: 22px; 
+    background: #1e293b; 
+    border-radius: 11px; 
+    cursor: pointer; 
+    border: 1px solid #334155; 
+    transition: 0.3s; 
+  }
+  .toggle-sw::after { 
+    content: ''; 
+    position: absolute; 
+    top: 2px; left: 2px; 
+    width: 16px; height: 16px; 
+    background: #64748b; 
+    border-radius: 50%; 
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+  }
+  .toggle-sw.on { background: #065f46; border-color: #10b981; }
+  .toggle-sw.on::after { 
+    left: 20px; 
+    background: #10b981; 
+    box-shadow: 0 0 8px #10b981; 
+  }
+  
+  .start-card { 
+    background: linear-gradient(180deg, #0f1622 0%, #090d15 100%); 
+    border: 1px solid #223348; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    position: relative;
+    overflow: hidden;
+  }
+  .start-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .start-card:hover::before { opacity: 1; }
+  .start-card:hover { border-color: #3b82f6; transform: translateY(-4px); }
+  .start-card.selected { 
+    border-color: #10b981; 
+    background: linear-gradient(180deg, #0d2a1f 0%, #090d15 100%); 
+    box-shadow: 0 0 20px rgba(16,185,129,0.3); 
+  }
+  
+  .view-transition {
+    animation: viewFade 0.4s ease-out;
+  }
+  @keyframes viewFade {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  /* Boot Sequence */
+  .boot-line {
+    animation: bootType 0.3s steps(40) forwards;
+    opacity: 0;
+  }
+  @keyframes bootType {
+    from { opacity: 0; transform: translateX(-5px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  /* Particle System */
+  .sawdust {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: #fbbf24;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 4px #fbbf24;
+  }
+  
+  /* Tool Slot Active */
+  .tool-active {
+    animation: toolActivate 0.4s ease-out;
+  }
+  @keyframes toolActivate {
+    0% { transform: scale(0.95); background: rgba(59,130,246,0.4); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  
+  /* MDI Console */
+  .console-slide {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .cmd-flash {
+    animation: cmdFlash 0.6s ease-out;
+  }
+  @keyframes cmdFlash {
+    0% { background: rgba(6, 182, 212, 0.3); }
+    100% { background: transparent; }
+  }
+  
+  /* Progress shimmer */
+  .progress-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: progressShimmer 2s infinite;
+  }
+  @keyframes progressShimmer {
+    to { left: 100%; }
+  }
+  
+  /* Number ticker */
+  .num-tick {
+    display: inline-block;
+    animation: numTick 0.3s ease-out;
+  }
+  @keyframes numTick {
+    0% { transform: translateY(-10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+</style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+<!-- ================= START SCREEN ================= -->
+<div id="startScreen" class="absolute inset-0 z-50 bg-[#06090e] flex flex-col items-center justify-center p-6">
+  <div class="max-w-4xl w-full">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#0d141f] border border-[#2d3e56] rounded-full mb-4">
+        <span class="led green pulse"></span>
+        <span class="text-[10px] font-mono font-bold text-emerald-400 tracking-widest">SYSTEM ONLINE</span>
+      </div>
+      <h1 class="text-4xl font-bold text-white tracking-tight mb-2 font-chakra">
+        <span class="text-amber-400">SLAB / CNC</span> Cabinet Pro
+      </h1>
+      <p class="text-slate-400 text-sm">Select active modules and configure display preferences.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="start-card selected rounded-lg p-5 cursor-pointer" id="card-v1" onclick="toggleMod('v1')">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
+            <span class="material-symbols-outlined text-xl text-cyan-400">ssid_chart</span>
+          </div>
+          <span class="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800 mod-badge-v1">ENABLED</span>
+        </div>
+        <h3 class="text-base font-bold text-white mb-1 font-chakra">Nesting Terminal</h3>
+        <p class="text-[11px] text-slate-400">2D SVG nesting view, oscilloscope, tool carousel, and G-code stream.</p>
+      </div>
+      <div class="start-card selected rounded-lg p-5 cursor-pointer" id="card-v2" onclick="toggleMod('v2')">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+            <span class="material-symbols-outlined text-xl text-amber-400">view_in_ar</span>
+          </div>
+          <span class="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800 mod-badge-v2">ENABLED</span>
+        </div>
+        <h3 class="text-base font-bold text-white mb-1 font-chakra">3D Simulation</h3>
+        <p class="text-[11px] text-slate-400">Three.js WebGL gantry router with real-time sheet goods cutting.</p>
+      </div>
+      <div class="start-card selected rounded-lg p-5 cursor-pointer" id="card-v3" onclick="toggleMod('v3')">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-lg bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
+            <span class="material-symbols-outlined text-xl text-purple-400">dashboard</span>
+          </div>
+          <span class="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800 mod-badge-v3">ENABLED</span>
+        </div>
+        <h3 class="text-base font-bold text-white mb-1 font-chakra">Backend Dashboard</h3>
+        <p class="text-[11px] text-slate-400">Microservice health, live daemon logs, and CAM metrics.</p>
+      </div>
+    </div>
+
+    <div class="bg-[#0b1018] border border-[#202e42] rounded-lg p-5 mb-8">
+      <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Display Preferences</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="flex items-center justify-between p-3 bg-[#070b12] border border-[#1a2536] rounded">
+          <div>
+            <div class="text-sm font-bold text-white font-chakra">CRT Scanlines</div>
+            <div class="text-[10px] text-slate-400 font-mono">Retro overlay effect</div>
+          </div>
+          <div class="toggle-sw on" id="tog-crt" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="flex items-center justify-between p-3 bg-[#070b12] border border-[#1a2536] rounded">
+          <div>
+            <div class="text-sm font-bold text-white font-chakra">Sawdust Particles</div>
+            <div class="text-[10px] text-slate-400 font-mono">Chip ejection effects</div>
+          </div>
+          <div class="toggle-sw on" id="tog-part" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <button onclick="launchApp()" class="cycle-btn px-8 py-3 rounded-lg text-white font-chakra font-bold text-sm tracking-widest flex items-center gap-2 mx-auto">
+        <span class="material-symbols-outlined text-xl">rocket_launch</span> LAUNCH WORKSPACE
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MAIN APP ================= -->
+<div id="mainApp" class="hidden flex-1 flex flex-col h-screen">
+  <!-- Top Nav -->
+  <nav class="h-12 bg-[#05080e] border-b border-[#1e2a3c] px-4 flex items-center justify-between shrink-0 z-40">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center bg-[#070b12] border border-[#2d3e56] px-2 py-1 rounded">
+        <div class="w-6 h-6 bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center rounded font-bold text-black text-[10px] mr-2">S/C</div>
+        <span class="text-[12px] font-bold tracking-wider text-amber-400">SLAB / CNC Pro</span>
+      </div>
+      <div class="flex items-center gap-0.5 bg-[#0a0f18] p-0.5 rounded border border-[#223348]">
+        <button id="nav-v1" class="hmi-btn active px-3 py-1 text-[10px] font-bold rounded-sm flex items-center gap-1" onclick="switchView('v1')">
+          <span class="material-symbols-outlined text-xs">ssid_chart</span> NESTING
+        </button>
+        <button id="nav-v2" class="hmi-btn px-3 py-1 text-[10px] font-bold text-slate-400 rounded-sm flex items-center gap-1" onclick="switchView('v2')">
+          <span class="material-symbols-outlined text-xs">view_in_ar</span> 3D SIM
+        </button>
+        <button id="nav-v3" class="hmi-btn px-3 py-1 text-[10px] font-bold text-slate-400 rounded-sm flex items-center gap-1" onclick="switchView('v3')">
+          <span class="material-symbols-outlined text-xs">dashboard</span> BACKEND
+        </button>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="hmi-btn px-2.5 py-1 text-[10px] font-bold text-cyan-400 rounded flex items-center gap-1" onclick="toggleConsole()">
+        <span class="material-symbols-outlined text-xs">terminal</span> MDI CONSOLE
+      </button>
+      <button class="hmi-btn px-2.5 py-1 text-[10px] font-bold text-slate-300 rounded flex items-center gap-1" onclick="location.reload()">
+        <span class="material-symbols-outlined text-xs">settings</span> SETUP
+      </button>
+      <div class="flex items-center gap-1.5 px-2 py-1 bg-[#080d15] border border-[#1e2a3c] rounded text-[9px] font-mono">
+        <span class="led green pulse"></span>
+        <span class="text-emerald-400 font-bold" id="globalStatus">READY</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- VIEW 1: NESTING TERMINAL -->
+  <div id="view-v1" class="flex-1 grid grid-cols-12 gap-1.5 p-1.5 overflow-hidden bg-[#05070c]">
+    <div class="col-span-3 flex flex-col gap-1.5 h-full min-h-0">
+      <div class="bg-[#0b1018] border border-[#202e42] rounded-lg p-2.5 shadow-xl">
+        <div class="flex items-center justify-between border-b border-[#1b2636] pb-1.5 mb-2">
+          <span class="font-chakra text-[11px] font-bold text-slate-200 uppercase">DRO</span>
+          <span class="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#121c2a] border border-[#2b3d57] text-cyan-300 font-bold">G54</span>
+        </div>
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between bg-[#070b12] border border-[#1a2536] px-2.5 py-1 rounded">
+            <span class="font-mono text-xs font-bold text-cyan-400 w-3">X</span>
+            <span class="dro text-sm font-bold text-cyan-300" id="v1-droX">+42.150</span>
+          </div>
+          <div class="flex items-center justify-between bg-[#070b12] border border-[#1a2536] px-2.5 py-1 rounded">
+            <span class="font-mono text-xs font-bold text-emerald-400 w-3">Y</span>
+            <span class="dro text-sm font-bold text-emerald-300" id="v1-droY">+18.720</span>
+          </div>
+          <div class="flex items-center justify-between bg-amber-950/20 border border-amber-600/40 px-2.5 py-1 rounded">
+            <span class="font-mono text-xs font-bold text-amber-400 w-3">Z</span>
+            <span class="dro text-sm font-bold text-amber-300" id="v1-droZ">-0.750</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- TOOL CAROUSEL (T01-T08) -->
+      <div class="bg-[#0b1018] border border-[#202e42] rounded-lg p-2.5 shadow-xl">
+        <div class="flex items-center justify-between pb-1.5 border-b border-[#1b2636] mb-2">
+          <span class="font-chakra text-[11px] font-bold text-slate-200 uppercase">TOOL CAROUSEL</span>
+          <span class="text-[8px] font-mono text-cyan-400 font-bold">HSK-63F · 8-SLOT</span>
+        </div>
+        <div class="space-y-1 max-h-48 overflow-y-auto pr-1">
+          <div class="p-1.5 bg-blue-950/30 border border-blue-500/60 rounded flex items-center justify-between cursor-pointer tool-active" id="s1-tool1" onclick="selectTool(1)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">T01</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-bold text-cyan-200 truncate">1/4" COMPRESSION</div><div class="text-[7px] font-mono text-slate-400">Standard Nesting</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-mono text-[7px] font-bold flex items-center gap-0.5"><span class="w-1 h-1 rounded-full bg-cyan-300 animate-ping"></span>IN SPINDLE</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer" id="s1-tool2" onclick="selectTool(2)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162335] text-slate-400">T02</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-semibold text-slate-300 truncate">5MM BORING DRILL</div><div class="text-[7px] font-mono text-slate-500">32mm System</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]">READY</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer" id="s1-tool3" onclick="selectTool(3)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162335] text-slate-400">T03</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-semibold text-slate-300 truncate">45° MITER V-BIT</div><div class="text-[7px] font-mono text-slate-500">Bevel Insert</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]">READY</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer" id="s1-tool4" onclick="selectTool(4)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162335] text-slate-400">T04</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-semibold text-slate-300 truncate">THERMO-SEAL COMP.</div><div class="text-[7px] font-mono text-slate-500">Resin Edge Seal</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]">READY</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer" id="s1-tool5" onclick="selectTool(5)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162335] text-slate-400">T05</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-semibold text-slate-300 truncate">ULTRASONIC PLASMA</div><div class="text-[7px] font-mono text-slate-500">Stone/Quartz</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]">READY</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer" id="s1-tool6" onclick="selectTool(6)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162335] text-slate-400">T06</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-semibold text-slate-300 truncate">HYBRID DED LASER</div><div class="text-[7px] font-mono text-slate-500">Metal Deposition</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]">READY</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer" id="s1-tool7" onclick="selectTool(7)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162335] text-slate-400">T07</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-semibold text-slate-300 truncate">SMA HOT-WIRE</div><div class="text-[7px] font-mono text-slate-500">Foam Articulator</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]">READY</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer" id="s1-tool8" onclick="selectTool(8)">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162335] text-slate-400">T08</span>
+              <div class="truncate"><div class="font-mono text-[9px] font-semibold text-slate-300 truncate">MFCD INK DEPOSIT</div><div class="text-[7px] font-mono text-slate-500">Conductive PCB</div></div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]">READY</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-[#0b1018] border border-[#202e42] rounded-lg p-2.5 shadow-xl flex-1 flex flex-col min-h-0">
+        <div class="flex items-center justify-between pb-1.5 border-b border-[#1b2636] mb-2">
+          <span class="font-chakra text-[11px] font-bold text-slate-200 uppercase">NESTED WORKPIECES</span>
+        </div>
+        <div class="flex-1 overflow-y-auto space-y-1">
+          <div class="p-1.5 bg-[#080d14] border border-[#1a2638] rounded flex items-center justify-between">
+            <div class="min-w-0"><div class="font-mono text-[10px] font-bold text-slate-200 truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-emerald-400">check_circle</span>BASE_CAB_SIDE_L</div></div>
+            <span class="px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 font-mono text-[8px] font-bold">FINISHED</span>
+          </div>
+          <div class="p-1.5 bg-[#080d14] border border-[#1a2638] rounded flex items-center justify-between">
+            <div class="min-w-0"><div class="font-mono text-[10px] font-bold text-slate-200 truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-emerald-400">check_circle</span>BASE_BOTTOM_DECK</div></div>
+            <span class="px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 font-mono text-[8px] font-bold">FINISHED</span>
+          </div>
+          <div class="p-1.5 bg-blue-950/30 border border-blue-500/50 rounded flex items-center justify-between">
+            <div class="min-w-0"><div class="font-mono text-[10px] font-bold text-cyan-200 truncate flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 pulse"></span>UPPER_SHELF_A</div></div>
+            <span class="px-1.5 py-0.5 rounded bg-blue-600 text-white font-mono text-[8px] font-bold animate-pulse" id="v1-badge">CUTTING 64%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-6 flex flex-col gap-1.5 h-full min-h-0 relative">
+      <div class="crt-overlay absolute inset-0 z-10 opacity-30 pointer-events-none" id="crt-v1"></div>
+      <div class="flex-1 bg-[#05080e] border border-[#1e2a3c] rounded-lg shadow-2xl relative overflow-hidden flex flex-col">
+        <!-- ENHANCED HUD (5 columns with new tool metrics) -->
+        <div class="absolute top-2 left-2 right-2 z-20 grid grid-cols-5 gap-1 p-1 rounded-lg bg-[#0c131ebf] backdrop-blur-md border border-[#223348]">
+          <div class="flex flex-col">
+            <span class="text-[8px] font-mono text-slate-400 uppercase">RPM</span>
+            <span class="text-[10px] font-mono font-bold text-slate-100"><span id="hud-rpm">18,010</span> <span class="text-[7px] text-cyan-400">RPM</span></span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[8px] font-mono text-slate-400 uppercase">FEED</span>
+            <span class="text-[10px] font-mono font-bold text-slate-100">420 <span class="text-[7px] text-emerald-400">IPM</span></span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[8px] font-mono text-slate-400 uppercase">RESIN FLOW</span>
+            <span class="text-[10px] font-mono font-bold text-amber-300" id="hud-resin">0.0 <span class="text-[7px]">ml/m</span></span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[8px] font-mono text-slate-400 uppercase">PLASMA</span>
+            <span class="text-[10px] font-mono font-bold text-purple-300" id="hud-plasma">0 <span class="text-[7px]">%</span></span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[8px] font-mono text-slate-400 uppercase">CYCLE</span>
+            <span class="text-[10px] font-mono font-bold text-slate-100">01:18 <span class="text-slate-500 text-[8px]">/ 02:45</span></span>
+          </div>
+        </div>
+        
+        <div class="w-full flex-1 flex items-center justify-center relative p-3 pt-14">
+          <div class="relative w-[500px] h-[250px] bg-[#0c121c] border-2 border-[#223348] rounded-md shadow-2xl overflow-hidden flex items-center justify-center" style="transform: perspective(700px) rotateX(24deg) rotateZ(-3deg);">
+            <div class="absolute inset-0 bg-[radial-gradient(#1e2c40_1.5px,transparent_1.5px)] [background-size:18px_18px] opacity-70"></div>
+            <div class="absolute top-0 bottom-0 w-8 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-800 border-x border-slate-500/50 shadow-2xl z-20 transition-all duration-75" id="v1-gantry" style="left: 48%;">
+              <div class="absolute left-1/2 -translate-x-1/2 w-10 h-12 bg-gradient-to-b from-[#2d3a4d] to-[#171f2b] border border-cyan-400/60 rounded shadow-2xl flex flex-col items-center justify-center transition-all duration-75" id="v1-carriage" style="top: 36%;">
+                <div class="w-4 h-4 rounded-full bg-slate-800 border border-slate-400 flex items-center justify-center">
+                  <div class="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_#f59e0b]"></div>
+                </div>
+                <span class="text-[7px] font-mono text-cyan-300 font-bold mt-0.5" id="v1-toolLabel">T01</span>
+              </div>
+            </div>
+            <div class="relative w-[460px] h-[220px] bg-[#9c7750] border border-[#6b4e2e] rounded-sm shadow-inner overflow-hidden">
+              <div class="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_6px,rgba(0,0,0,0.03)_6px,rgba(0,0,0,0.03)_12px)]"></div>
+              <svg class="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 460 220">
+                <rect fill="#caa57c" height="90" rx="2" stroke="#251608" stroke-width="2" width="120" x="15" y="15"></rect>
+                <rect fill="none" height="90" rx="2" stroke="#10b981" stroke-opacity="0.6" stroke-width="1" width="120" x="15" y="15"></rect>
+                <rect fill="#caa57c" height="90" rx="2" stroke="#251608" stroke-width="2" width="120" x="145" y="15"></rect>
+                <rect fill="#d8b48b" height="90" rx="2" stroke="#251608" stroke-width="2" width="200" x="15" y="115"></rect>
+                <path class="dash-flow" d="M 15 115 L 215 115 L 215 205 L 100 205" fill="none" stroke="#00e5ff" stroke-width="2"></path>
+                <g transform="translate(100, 205)" id="v1-sparkGroup">
+                  <circle class="animate-pulse" cx="0" cy="0" fill="#f59e0b" r="4"></circle>
+                  <circle class="rotate-slow" cx="0" cy="0" fill="none" r="14" stroke="#00e5ff" stroke-dasharray="2 2" stroke-opacity="0.7" stroke-width="1"></circle>
+                </g>
+              </svg>
+            </div>
+          </div>
+          <div class="absolute inset-0 pointer-events-none overflow-hidden" id="v1-particles"></div>
+        </div>
+
+        <div class="p-2 bg-[#0a0f17] border-t border-[#1b2636] flex flex-col gap-1.5 shrink-0 z-20">
+          <div class="w-full h-2 bg-[#141d2a] rounded-full overflow-hidden cursor-pointer progress-shimmer" onclick="v1Seek(event)">
+            <div class="bg-gradient-to-r from-blue-600 via-cyan-500 to-amber-400 h-full rounded-full relative transition-all duration-200" id="v1-progress" style="width: 64%;">
+              <div class="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full shadow"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1">
+              <button class="hmi-btn px-2 py-0.5 text-slate-300 rounded font-mono text-[9px]" onclick="v1Action('rewind')"><span class="material-symbols-outlined text-[12px]">fast_rewind</span></button>
+              <button class="px-3 py-0.5 bg-blue-600 text-white rounded font-mono text-[9px] font-bold flex items-center gap-1" id="v1-playBtn" onclick="v1TogglePlay()">
+                <span class="material-symbols-outlined text-[12px]" id="v1-playIcon">pause</span> <span id="v1-playText">PAUSE</span>
+              </button>
+              <button class="hmi-btn px-2 py-0.5 text-slate-300 rounded font-mono text-[9px]" onclick="v1Action('fwd')"><span class="material-symbols-outlined text-[12px]">skip_next</span></button>
+            </div>
+            <span class="font-mono text-[9px] text-cyan-300 font-bold" id="v1-pctText">64% COMPLETE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-3 flex flex-col gap-1.5 h-full min-h-0">
+      <div class="bg-[#0b1018] border border-[#202e42] rounded-lg p-2.5 shadow-xl flex-1 flex flex-col min-h-0">
+        <div class="flex items-center justify-between pb-1.5 border-b border-[#1b2636] mb-2">
+          <span class="font-chakra text-[11px] font-bold text-slate-200 uppercase">G-CODE STREAM</span>
+        </div>
+        <div class="flex-1 bg-[#05080e] border border-[#182333] rounded p-2 overflow-y-auto space-y-0.5" id="v1-gcode">
+          <div class="gcode-line text-slate-500 flex justify-between"><span>N0038 G00 Z0.2500</span><span class="text-[8px] text-slate-600">EXEC</span></div>
+          <div class="gcode-line text-slate-400 flex justify-between"><span>N0040 G01 Z-0.7500 F80</span><span class="text-[8px] text-slate-500">EXEC</span></div>
+          <div class="gcode-line active flex justify-between" id="v1-activeLine"><span>N0042 G01 X42.150 Y18.720 F420</span><span class="text-[8px] text-amber-300 font-bold animate-pulse">ACTIVE</span></div>
+          <div class="gcode-line text-slate-300 flex justify-between"><span>N0043 G01 X48.500 Y18.720</span><span class="text-[8px] text-slate-500">QUEUE</span></div>
+          <div class="gcode-line text-slate-400 flex justify-between"><span>N0044 G01 Y22.5000</span><span class="text-[8px] text-slate-500">QUEUE</span></div>
+          <div class="gcode-line text-slate-500 flex justify-between"><span>N0046 G00 Z1.0000</span><span class="text-[8px] text-slate-600">QUEUE</span></div>
+        </div>
+      </div>
+      <div class="h-14 bg-[#0a0e16] border-t-2 border-[#1f2d40] px-4 flex items-center justify-between shadow-2xl shrink-0">
+        <div class="flex items-center gap-2">
+          <button class="cycle-btn h-10 px-3 rounded text-white font-chakra text-[10px] font-bold flex items-center gap-1" id="v1-cycleBtn" onclick="v1Start()">
+            <span class="material-symbols-outlined text-sm">play_circle</span> START
+          </button>
+          <button class="hold-btn h-10 px-3 rounded text-white font-chakra text-[10px] font-bold flex items-center gap-1" onclick="v1Hold()">
+            <span class="material-symbols-outlined text-sm">pause_circle</span> HOLD
+          </button>
+        </div>
+        <button class="estop w-10 h-10 rounded-full flex items-center justify-center text-white" id="v1-estop" onclick="v1Estop()">
+          <span class="material-symbols-outlined text-lg font-black">emergency</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 2: 3D SIMULATION -->
+  <div id="view-v2" class="hidden flex-1 flex flex-col overflow-hidden bg-[#090d13]">
+    <div class="flex-1 grid grid-cols-12 gap-1.5 p-1.5 overflow-hidden">
+      <aside class="col-span-3 flex flex-col gap-1.5 overflow-hidden">
+        <div class="bg-[#121722] border-2 border-[#2b3749] rounded p-2.5 shadow-md">
+          <div class="flex items-center justify-between pb-1.5 border-b border-[#222d3d] mb-2">
+            <span class="text-[11px] font-bold text-cyan-400 uppercase">MACHINE DRO</span>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between bg-[#080c12] border border-[#222c3d] px-2 py-1 rounded">
+              <span class="w-6 h-6 rounded bg-red-950 border border-red-700 text-red-400 font-bold flex items-center justify-center text-xs font-mono">X</span>
+              <span class="dro text-cyan-400 text-lg font-bold" id="v2-droX">+000.000</span>
+            </div>
+            <div class="flex items-center justify-between bg-[#080c12] border border-[#222c3d] px-2 py-1 rounded">
+              <span class="w-6 h-6 rounded bg-green-950 border border-green-700 text-green-400 font-bold flex items-center justify-center text-xs font-mono">Y</span>
+              <span class="dro text-cyan-400 text-lg font-bold" id="v2-droY">+000.000</span>
+            </div>
+            <div class="flex items-center justify-between bg-[#080c12] border border-[#222c3d] px-2 py-1 rounded">
+              <span class="w-6 h-6 rounded bg-blue-950 border border-blue-700 text-blue-400 font-bold flex items-center justify-center text-xs font-mono">Z</span>
+              <span class="dro text-amber-400 text-lg font-bold" id="v2-droZ">+001.000</span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-[#121722] border-2 border-[#2b3749] rounded p-2 shadow-md">
+          <div class="flex items-center justify-between pb-1 border-b border-[#232d3d] mb-2">
+            <span class="text-[11px] font-bold text-cyan-400 uppercase">MANUAL JOG</span>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" id="v2-jog" class="accent-amber-500">
+              <span class="text-[9px] font-mono text-amber-400 font-bold">JOG</span>
+            </label>
+          </div>
+          <div class="grid grid-cols-3 gap-1 text-center">
+            <button class="hmi-btn py-1 text-xs font-bold text-slate-300 rounded" onclick="v2Jog('Y', 1)">Y+</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-slate-300 rounded" onclick="v2Jog('Z', 1)">Z+</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-emerald-400 rounded bg-emerald-900/20" onclick="v2Step(1)">STEP &gt;</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-slate-300 rounded" onclick="v2Jog('X', -1)">X-</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-cyan-400 rounded bg-cyan-900/20" onclick="v2Zero()">ZERO</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-slate-300 rounded" onclick="v2Jog('X', 1)">X+</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-slate-300 rounded" onclick="v2Jog('Y', -1)">Y-</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-slate-300 rounded" onclick="v2Jog('Z', -1)">Z-</button>
+            <button class="hmi-btn py-1 text-xs font-bold text-amber-400 rounded bg-amber-900/20" onclick="v2Step(-1)">&lt; STEP</button>
+          </div>
+        </div>
+      </aside>
+      <section class="col-span-6 flex flex-col gap-1.5 relative overflow-hidden">
+        <div class="flex-1 relative bg-[#070a0f] border-2 border-[#2a364a] rounded overflow-hidden shadow-inner">
+          <div class="w-full h-full" id="v2-viewport"></div>
+          <div class="crt-overlay absolute inset-0 opacity-20"></div>
+          <div class="absolute bottom-2 left-2 right-2 bg-[#121822]/95 border border-[#334257] p-2 rounded flex items-center gap-3 backdrop-blur shadow-lg">
+            <button class="hmi-btn px-3 py-1 text-xs font-bold text-emerald-400 rounded flex items-center gap-1" onclick="v2TogglePlay()">
+              <span class="material-symbols-outlined text-sm" id="v2-playIcon">play_arrow</span> <span id="v2-playText">RUN</span>
+            </button>
+            <button class="hmi-btn px-2 py-1 text-xs font-bold text-amber-400 rounded" onclick="v2Rewind()">
+              <span class="material-symbols-outlined text-sm">replay</span>
+            </button>
+            <div class="flex-1">
+              <div class="flex justify-between text-[9px] font-mono text-slate-400 mb-0.5">
+                <span>TOOLPATH</span>
+                <span class="text-cyan-300 font-bold" id="v2-time">00:00 / 00:00</span>
+              </div>
+              <div class="w-full bg-[#090d14] h-2 rounded border border-slate-700 overflow-hidden progress-shimmer">
+                <div class="h-full bg-gradient-to-r from-cyan-500 via-amber-400 to-emerald-400 w-0 transition-all duration-200" id="v2-progress"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="h-16 bg-[#141a24] border-2 border-[#2b3749] rounded p-2 flex items-center justify-between shadow-lg">
+          <div class="flex items-center gap-3">
+            <button class="cycle-btn h-12 px-4 rounded flex flex-col items-center justify-center text-white" id="v2-cycleBtn" onclick="v2Start()">
+              <span class="material-symbols-outlined text-xl font-bold">play_circle</span>
+              <span class="text-[9px] font-black uppercase mt-0.5">START</span>
+            </button>
+            <button class="hold-btn h-12 px-3 rounded flex flex-col items-center justify-center text-black" onclick="v2Hold()">
+              <span class="material-symbols-outlined text-xl font-bold">pause_circle</span>
+              <span class="text-[9px] font-black uppercase mt-0.5">HOLD</span>
+            </button>
+            <button class="hmi-btn h-12 px-3 rounded flex flex-col items-center justify-center text-red-400" onclick="v2Stop()">
+              <span class="material-symbols-outlined text-lg">stop_circle</span>
+              <span class="text-[8px] font-bold uppercase mt-0.5">ABORT</span>
+            </button>
+          </div>
+          <button class="estop w-12 h-12 rounded-full flex items-center justify-center text-white" id="v2-estop" onclick="v2Estop()">
+            <span class="material-symbols-outlined text-lg font-black">emergency</span>
+          </button>
+        </div>
+      </section>
+      <aside class="col-span-3 flex flex-col gap-1.5 overflow-hidden">
+        <div class="flex-1 bg-[#121722] border-2 border-[#2b3749] rounded p-2 flex flex-col min-h-0 shadow-md">
+          <div class="flex items-center justify-between pb-1.5 border-b border-[#232d3d] mb-1.5">
+            <span class="text-[11px] font-bold text-cyan-400 uppercase">G-CODE BUFFER</span>
+            <span class="text-[9px] font-mono text-slate-400">BLOCK: <span class="text-amber-400 font-bold" id="v2-gline">N0000</span></span>
+          </div>
+          <div class="flex-1 bg-[#06090e] border border-[#1d2634] p-2 rounded overflow-y-auto font-mono text-[10px] space-y-0.5 text-slate-400" id="v2-gcode"></div>
+          <div class="mt-2 pt-2 border-t border-[#232d3d] bg-[#0c1017] p-2 rounded space-y-1 text-[10px] font-mono">
+            <div class="flex justify-between"><span class="text-slate-400">EST. TIME:</span><span class="text-emerald-400 font-bold" id="v2-estTime">00:00</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">YIELD:</span><span class="text-amber-400 font-bold" id="v2-yield">0%</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- VIEW 3: BACKEND DASHBOARD -->
+  <div id="view-v3" class="hidden flex-1 flex overflow-hidden bg-slate-100 text-slate-900">
+    <aside class="w-56 shrink-0 border-r border-slate-800 bg-[#0b1324] text-slate-200 flex flex-col shadow-xl">
+      <div class="flex h-12 items-center gap-2.5 border-b border-slate-800/80 px-3.5 bg-[#080d19]">
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-[12px]">S/C</div>
+        <span class="font-bold text-[13px] text-white tracking-tight">SLAB / CNC</span>
+      </div>
+      <nav class="flex-1 overflow-y-auto px-2 py-3 text-[12px]">
+        <div class="mb-4">
+          <div class="mb-1.5 px-2.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">Production</div>
+          <div class="flex flex-col gap-[1px]">
+            <a href="#" class="group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 font-medium transition-colors text-slate-300 hover:bg-slate-800 hover:text-white"><span class="w-4 text-center text-xs opacity-80">≡</span><span>Cut List</span></a>
+            <a href="#" class="group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 font-medium transition-colors text-slate-300 hover:bg-slate-800 hover:text-white"><span class="w-4 text-center text-xs opacity-80">▦</span><span>Nesting</span></a>
+            <a href="#" class="group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 font-medium transition-colors text-slate-300 hover:bg-slate-800 hover:text-white"><span class="w-4 text-center text-xs opacity-80">⌗</span><span>CNC CAM</span></a>
+          </div>
+        </div>
+        <div class="mb-4">
+          <div class="mb-1.5 px-2.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">Dev</div>
+          <div class="flex flex-col gap-[2px]">
+            <a href="#" class="group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 font-semibold transition-colors bg-slate-800 text-white shadow-sm">
+              <span class="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-blue-500"></span>
+              <span class="w-4 text-center text-xs text-blue-400">⚙</span><span>Backend Dashboard</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+    </aside>
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <header class="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
+        <div class="flex items-center gap-3 text-[12px]">
+          <span class="text-xs uppercase font-bold tracking-wider text-slate-400">Workspace</span>
+          <span class="text-slate-300">/</span>
+          <span class="font-bold text-slate-900 text-sm">Precision Shop</span>
+          <span class="text-slate-300">/</span>
+          <span class="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs">Backend Dashboard</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-600">CNC Hub · Online</span>
+          </div>
+        </div>
+      </header>
+      <main class="flex min-w-0 flex-1 flex-col overflow-y-auto p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium font-jakarta"><span>Active CNC Jobs</span></div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="v3-jobs" class="text-2xl font-extrabold text-slate-900 font-mono">0</span>
+              <span class="text-xs font-semibold text-emerald-600">live</span>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium font-jakarta"><span>Nesting Yield</span></div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="v3-yield" class="text-2xl font-extrabold text-slate-900 font-mono">0%</span>
+              <span class="text-xs font-semibold text-emerald-600">▲ opt</span>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium font-jakarta"><span>G-Code Gen Speed</span></div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span class="text-2xl font-extrabold text-slate-900 font-mono">312ms</span>
+              <span class="text-xs font-semibold text-slate-400">per cab</span>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium font-jakarta"><span>Woody AI Cache</span></div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span class="text-2xl font-extrabold text-slate-900 font-mono">98.2%</span>
+              <span class="text-xs font-semibold text-emerald-600">Hit</span>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-md flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+              <div class="flex items-center gap-2">
+                <div class="flex gap-1.5">
+                  <span class="h-2.5 w-2.5 rounded-full bg-rose-500/80"></span>
+                  <span class="h-2.5 w-2.5 rounded-full bg-amber-500/80"></span>
+                  <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/80"></span>
+                </div>
+                <span class="font-mono text-xs font-semibold text-slate-300 ml-2">stdout · backend-daemon.log</span>
+              </div>
+              <span class="font-mono text-[11px] text-emerald-400 flex items-center gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 pulse"></span> Live
+              </span>
+            </div>
+            <div id="v3-logs" class="flex-1 overflow-y-auto space-y-1 font-mono text-[11px] leading-relaxed text-slate-300 pr-2 max-h-64">
+              <div class="text-slate-500">[System] Backend Dashboard initialized.</div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex flex-col justify-between">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3 font-jakarta">Quick Maintenance</h3>
+              <div class="space-y-2">
+                <button class="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-left transition-colors" onclick="v3Log('BUFFER: Nesting buffer cleared.', 'INFO')">
+                  <div>
+                    <div class="text-xs font-semibold text-slate-800 font-jakarta">Clear Nesting Buffer</div>
+                    <div class="text-[10px] text-slate-400">Purge cached solutions</div>
+                  </div>
+                  <span class="text-xs text-slate-400">→</span>
+                </button>
+                <button class="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-left transition-colors" onclick="v3Log('AI: NAAWS 4.0 Vector Index reloaded.', 'SUCCESS')">
+                  <div>
+                    <div class="text-xs font-semibold text-slate-800 font-jakarta">Reload NAAWS 4.0 Index</div>
+                    <div class="text-[10px] text-slate-400">Sync with Wood Spec</div>
+                  </div>
+                  <span class="text-xs text-slate-400">→</span>
+                </button>
+                <button class="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-left transition-colors" onclick="switchView('v2')">
+                  <div>
+                    <div class="text-xs font-semibold text-slate-800 font-jakarta">Test CNC Dry Run</div>
+                    <div class="text-[10px] text-slate-400">Switch to 3D Simulation</div>
+                  </div>
+                  <span class="text-xs text-slate-400">→</span>
+                </button>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-jakarta">
+              <span>Host: ip-10-0-4-18</span>
+              <span class="font-mono text-emerald-600 font-semibold">Uptime: 14d 8h</span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MDI CONSOLE ================= -->
+<div id="mdiConsole" class="fixed bottom-0 left-0 right-0 z-50 transform translate-y-full console-slide">
+  <div class="max-w-6xl mx-auto bg-[#0b1018] border-t-2 border-x-2 border-cyan-500/50 rounded-t-xl shadow-2xl shadow-cyan-500/10">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-[#202e42] bg-[#070b12] rounded-t-xl">
+      <div class="flex items-center gap-2">
+        <span class="led green pulse"></span>
+        <span class="font-chakra text-sm font-bold text-cyan-400 tracking-wider">MDI TERMINAL & TOOL CONFIGURATOR</span>
+        <span class="text-[9px] font-mono text-slate-500 ml-2">Press ` or Ctrl+K to toggle</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex gap-1 bg-[#121c2a] p-0.5 rounded border border-[#2b3d57]">
+          <button class="px-3 py-1 text-[10px] font-bold text-white bg-cyan-600 rounded" id="tab-cmd" onclick="switchConsoleTab('cmd')">COMMAND LINE</button>
+          <button class="px-3 py-1 text-[10px] font-bold text-slate-400 rounded" id="tab-cfg" onclick="switchConsoleTab('cfg')">TOOL PARAMETERS</button>
+        </div>
+        <button class="text-slate-400 hover:text-white" onclick="toggleConsole()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+    <div class="p-4 h-64 overflow-y-auto">
+      <div id="panel-cmd" class="h-full flex flex-col">
+        <div class="flex-1 bg-[#05080e] border border-[#182333] rounded p-3 font-mono text-[11px] text-slate-300 overflow-y-auto mb-2" id="cmd-output">
+          <div class="text-slate-500">SIEMENS 840D / THERMWOOD MDI READY.</div>
+          <div class="text-slate-500">Type custom G-Code or M-Code (e.g., <span class="text-cyan-400">T04</span>, <span class="text-amber-400">M88</span>, <span class="text-emerald-400">G01 X10 Y10 F400</span>)</div>
+          <div class="text-slate-500">---</div>
+        </div>
+        <div class="flex items-center gap-2 bg-[#070b12] border border-[#1a2536] rounded p-2">
+          <span class="text-cyan-400 font-mono font-bold text-sm">&gt;_</span>
+          <input type="text" id="cmd-input" class="flex-1 bg-transparent border-none outline-none text-emerald-300 font-mono text-sm uppercase tracking-wider" placeholder="ENTER BLOCK..." onkeydown="if(event.key==='Enter')executeMDI()">
+          <button class="hmi-btn px-4 py-1.5 text-[10px] font-bold text-amber-400 rounded" onclick="executeMDI()">EXECUTE</button>
+        </div>
+      </div>
+      <div id="panel-cfg" class="hidden h-full grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto pr-2">
+        <div class="bg-[#070b12] border border-[#1a2536] rounded p-3">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded">T04</span>
+            <span class="text-[11px] font-bold text-slate-200">Thermo-Seal Resin</span>
+          </div>
+          <label class="text-[9px] text-slate-400 font-mono">FLOW RATE (ml/min)</label>
+          <input type="range" min="0" max="20" value="12" class="w-full accent-cyan-500" oninput="updateToolParam('resin', this.value)">
+          <label class="text-[9px] text-slate-400 font-mono mt-2 block">NOZZLE TEMP (°C)</label>
+          <input type="range" min="150" max="250" value="210" class="w-full accent-amber-500">
+        </div>
+        <div class="bg-[#070b12] border border-[#1a2536] rounded p-3">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded">T05</span>
+            <span class="text-[11px] font-bold text-slate-200">Ultrasonic Plasma</span>
+          </div>
+          <label class="text-[9px] text-slate-400 font-mono">FREQ (kHz)</label>
+          <input type="range" min="15" max="25" value="20" class="w-full accent-purple-500">
+          <label class="text-[9px] text-slate-400 font-mono mt-2 block">PLASMA DUTY (%)</label>
+          <input type="range" min="0" max="100" value="85" class="w-full accent-pink-500" oninput="updateToolParam('plasma', this.value)">
+        </div>
+        <div class="bg-[#070b12] border border-[#1a2536] rounded p-3">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-1.5 py-0.5 bg-rose-600 text-white text-[9px] font-bold rounded">T06</span>
+            <span class="text-[11px] font-bold text-slate-200">Hybrid DED Laser</span>
+          </div>
+          <label class="text-[9px] text-slate-400 font-mono">LASER POWER (W)</label>
+          <input type="range" min="0" max="500" value="250" class="w-full accent-rose-500">
+          <label class="text-[9px] text-slate-400 font-mono mt-2 block">POWDER FEED (g/min)</label>
+          <input type="range" min="0" max="10" value="4" class="w-full accent-orange-500">
+        </div>
+        <div class="bg-[#070b12] border border-[#1a2536] rounded p-3">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-1.5 py-0.5 bg-orange-600 text-white text-[9px] font-bold rounded">T07</span>
+            <span class="text-[11px] font-bold text-slate-200">SMA Hot-Wire</span>
+          </div>
+          <label class="text-[9px] text-slate-400 font-mono">WIRE CAMBER (%)</label>
+          <input type="range" min="-50" max="50" value="0" class="w-full accent-orange-500" oninput="updateToolParam('camber', this.value)">
+          <label class="text-[9px] text-slate-400 font-mono mt-2 block">SMA TEMP (°C)</label>
+          <input type="range" min="50" max="200" value="120" class="w-full accent-yellow-500">
+        </div>
+        <div class="bg-[#070b12] border border-[#1a2536] rounded p-3">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-1.5 py-0.5 bg-emerald-600 text-white text-[9px] font-bold rounded">T08</span>
+            <span class="text-[11px] font-bold text-slate-200">MFCD Ink Deposit</span>
+          </div>
+          <label class="text-[9px] text-slate-400 font-mono">INK PRESSURE (PSI)</label>
+          <input type="range" min="0" max="100" value="45" class="w-full accent-emerald-500" oninput="updateToolParam('ink', this.value)">
+          <label class="text-[9px] text-slate-400 font-mono mt-2 block">UV CURE (mW/cm²)</label>
+          <input type="range" min="0" max="500" value="200" class="w-full accent-violet-500">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// STATE
+// ============================================================================
+const State = {
+  view: 'start',
+  mods: { v1: true, v2: true, v3: true },
+  activeTool: 1,
+  v1: { running: true, estopped: false, progress: 64, x: 42.15, y: 18.72, z: -0.75 },
+  v2: { viewer: null, running: false, estopped: false, idx: 0, ops: [], x:0, y:0, z:1 },
+  v3: { logs: 0 }
+};
+
+// ============================================================================
+// START SCREEN
+// ============================================================================
+function toggleMod(id) {
+  State.mods[id] = !State.mods[id];
+  const card = document.getElementById('card-' + id);
+  const badge = card.querySelector('.mod-badge-' + id);
+  if (State.mods[id]) {
+    card.classList.add('selected');
+    badge.innerText = 'ENABLED';
+    badge.className = badge.className.replace(/text-rose-400 bg-rose-950\/50 border-rose-800/g, 'text-emerald-400 bg-emerald-950/50 border-emerald-800');
+  } else {
+    card.classList.remove('selected');
+    badge.innerText = 'DISABLED';
+    badge.className = badge.className.replace(/text-emerald-400 bg-emerald-950\/50 border-emerald-800/g, 'text-rose-400 bg-rose-950/50 border-rose-800');
+  }
+}
+
+function launchApp() {
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('mainApp').classList.add('flex');
+  
+  let first = 'v1';
+  if (!State.mods.v1) first = 'v2';
+  if (!State.mods.v2 && !State.mods.v1) first = 'v3';
+  switchView(first);
+  
+  if (State.mods.v1) v1Loop();
+  if (State.mods.v3) setInterval(v3Heartbeat, 4000);
+}
+
+// ============================================================================
+// VIEW SWITCHING
+// ============================================================================
+function switchView(id) {
+  State.view = id;
+  ['v1', 'v2', 'v3'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) {
+      if (v === id) { 
+        el.classList.remove('hidden'); 
+        el.classList.add('flex', 'view-transition'); 
+        setTimeout(() => el.classList.remove('view-transition'), 400);
+      } else { 
+        el.classList.add('hidden'); 
+        el.classList.remove('flex'); 
+      }
+    }
+    const btn = document.getElementById('nav-' + v);
+    if (btn) {
+      if (v === id) { btn.classList.add('active'); btn.classList.remove('text-slate-400'); }
+      else { btn.classList.remove('active'); btn.classList.add('text-slate-400'); }
+    }
+  });
+
+  if (id === 'v2' && !State.v2.viewer) {
+    setTimeout(() => {
+      try { initV2(); } catch(e) { console.error("3D Init Failed", e); }
+    }, 100);
+  }
+  
+  if (id === 'v2' && State.v2.viewer) {
+    setTimeout(() => {
+      const vp = document.getElementById('v2-viewport');
+      if (vp && State.v2.viewer.renderer) {
+        State.v2.viewer.renderer.setSize(vp.clientWidth, vp.clientHeight);
+        State.v2.viewer.camera.aspect = vp.clientWidth / vp.clientHeight;
+        State.v2.viewer.camera.updateProjectionMatrix();
+      }
+    }, 50);
+  }
+}
+
+// ============================================================================
+// TOOL SELECTION (T01-T08)
+// ============================================================================
+function selectTool(num) {
+  State.activeTool = num;
+  for (let t = 1; t <= 8; t++) {
+    const slot = document.getElementById('s1-tool' + t);
+    if (!slot) continue;
+    if (t === num) {
+      slot.className = 'p-1.5 bg-blue-950/30 border border-blue-500/60 rounded flex items-center justify-between cursor-pointer tool-active';
+      const badge = slot.querySelector('span:last-child');
+      if (badge) {
+        badge.className = 'px-1.5 py-0.5 rounded bg-blue-600 text-white font-mono text-[7px] font-bold flex items-center gap-0.5';
+        badge.innerHTML = '<span class="w-1 h-1 rounded-full bg-cyan-300 animate-ping"></span>IN SPINDLE';
+      }
+    } else {
+      slot.className = 'p-1.5 bg-[#080d14] hover:bg-[#121a26] border border-[#1a2638] rounded flex items-center justify-between cursor-pointer';
+      const badge = slot.querySelector('span:last-child');
+      if (badge) {
+        badge.className = 'px-1.5 py-0.5 rounded bg-[#121c2a] text-slate-400 font-mono text-[7px]';
+        badge.innerText = 'READY';
+      }
+    }
+  }
+  
+  // Update tool label on gantry
+  const label = document.getElementById('v1-toolLabel');
+  if (label) label.innerText = 'T0' + num;
+  
+  // Tool-specific telemetry
+  const resinEl = document.getElementById('hud-resin');
+  const plasmaEl = document.getElementById('hud-plasma');
+  
+  const toolData = {
+    1: { name: '1/4" COMPRESSION', resin: 0, plasma: 0, log: 'Standard compression bit loaded.' },
+    2: { name: '5MM BORING DRILL', resin: 0, plasma: 0, log: 'Boring drill engaged for 32mm system.' },
+    3: { name: '45° MITER V-BIT', resin: 0, plasma: 0, log: 'V-groove bit ready for bevel cuts.' },
+    4: { name: 'THERMO-SEAL COMP.', resin: 12.5, plasma: 0, log: 'Thermo-Seal loaded. Resin heater at 210°C.' },
+    5: { name: 'ULTRASONIC PLASMA', resin: 0, plasma: 85, log: 'Plasma head ignited. 20kHz ultrasonic active.' },
+    6: { name: 'HYBRID DED LASER', resin: 0, plasma: 0, log: 'DED laser armed at 250W. Powder feed primed.' },
+    7: { name: 'SMA HOT-WIRE', resin: 0, plasma: 0, log: 'SMA wire calibrated. Tension nominal.' },
+    8: { name: 'MFCD INK DEPOSIT', resin: 0, plasma: 0, log: 'Conductive ink primed. UV cure LED ready.' }
+  };
+  
+  const data = toolData[num] || toolData[1];
+  if (resinEl) resinEl.innerHTML = `${data.resin.toFixed(1)} <span class="text-[7px]">ml/m</span>`;
+  if (plasmaEl) plasmaEl.innerHTML = `${data.plasma} <span class="text-[7px]">%</span>`;
+  
+  v3Log(`ATC: Loaded T0${num} ${data.name}. ${data.log}`, num >= 4 ? 'SUCCESS' : 'INFO');
+}
+
+// ============================================================================
+// VIEW 1: NESTING TERMINAL
+// ============================================================================
+function v1Loop() {
+  if (State.view !== 'v1' || !State.v1.running || State.v1.estopped) {
+    requestAnimationFrame(v1Loop);
+    return;
+  }
+  
+  const jx = (Math.random() - 0.5) * 0.004;
+  const jy = (Math.random() - 0.5) * 0.004;
+  document.getElementById('v1-droX').innerText = (State.v1.x + jx > 0 ? '+' : '') + (State.v1.x + jx).toFixed(3);
+  document.getElementById('v1-droY').innerText = (State.v1.y + jy > 0 ? '+' : '') + (State.v1.y + jy).toFixed(3);
+
+  State.v1.progress += 0.05;
+  if (State.v1.progress > 100) State.v1.progress = 10;
+  const pct = Math.round(State.v1.progress);
+  document.getElementById('v1-progress').style.width = pct + '%';
+  document.getElementById('v1-pctText').innerText = pct + '% COMPLETE';
+  document.getElementById('v1-badge').innerText = 'CUTTING ' + pct + '%';
+
+  const gx = document.getElementById('v1-gantry');
+  const gc = document.getElementById('v1-carriage');
+  if (gx) gx.style.left = (44 + Math.sin(Date.now() / 2000) * 8) + '%';
+  if (gc) gc.style.top = (32 + Math.cos(Date.now() / 2500) * 12) + '%';
+
+  // RPM jitter
+  const rpm = Math.floor(18000 + (Math.random() - 0.5) * 28);
+  const rpmEl = document.getElementById('hud-rpm');
+  if (rpmEl) rpmEl.innerText = rpm.toLocaleString();
+
+  // Sawdust particles
+  if (document.getElementById('tog-part').classList.contains('on')) {
+    spawnSawdust();
+  }
+
+  requestAnimationFrame(v1Loop);
+}
+
+function spawnSawdust() {
+  const field = document.getElementById('v1-particles');
+  if (!field) return;
+  const p = document.createElement('div');
+  p.className = 'sawdust';
+  p.style.left = (180 + Math.random() * 40) + 'px';
+  p.style.top = (190 + Math.random() * 30) + 'px';
+  field.appendChild(p);
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 20 + Math.random() * 40;
+  const tx = Math.cos(angle) * dist;
+  const ty = Math.sin(angle) * dist - 15;
+  p.animate([
+    { transform: 'translate(0,0) scale(1)', opacity: 1 },
+    { transform: `translate(${tx}px, ${ty}px) scale(0.2)`, opacity: 0 }
+  ], { duration: 500 + Math.random() * 300, easing: 'ease-out' }).onfinish = () => p.remove();
+}
+
+function v1TogglePlay() {
+  State.v1.running = !State.v1.running;
+  document.getElementById('v1-playIcon').innerText = State.v1.running ? 'pause' : 'play_arrow';
+  document.getElementById('v1-playText').innerText = State.v1.running ? 'PAUSE' : 'RESUME';
+  const btn = document.getElementById('v1-cycleBtn');
+  if (State.v1.running) btn.classList.add('running'); else btn.classList.remove('running');
+  v3Log('NESTING: Cycle ' + (State.v1.running ? 'RESUMED' : 'PAUSED'), State.v1.running ? 'SUCCESS' : 'WARN');
+}
+
+function v1Start() { 
+  State.v1.running = true; 
+  document.getElementById('v1-playIcon').innerText = 'pause'; 
+  document.getElementById('v1-playText').innerText = 'PAUSE'; 
+  document.getElementById('v1-cycleBtn').classList.add('running');
+  v3Log('NESTING: CYCLE START', 'SUCCESS'); 
+}
+
+function v1Hold() { 
+  State.v1.running = false; 
+  document.getElementById('v1-playIcon').innerText = 'play_arrow'; 
+  document.getElementById('v1-playText').innerText = 'RESUME'; 
+  document.getElementById('v1-cycleBtn').classList.remove('running');
+  v3Log('NESTING: FEED HOLD', 'WARN'); 
+}
+
+function v1Action(act) {
+  if (act === 'rewind') { State.v1.progress = 0; }
+  if (act === 'fwd') { State.v1.progress = Math.min(100, State.v1.progress + 5); }
+}
+
+function v1Seek(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  State.v1.progress = ((e.clientX - rect.left) / rect.width) * 100;
+}
+
+function v1Estop() {
+  State.v1.estopped = !State.v1.estopped;
+  State.v1.running = false;
+  const btn = document.getElementById('v1-estop');
+  if (State.v1.estopped) {
+    btn.classList.add('latched');
+    document.getElementById('v1-cycleBtn').classList.remove('running');
+    document.body.style.boxShadow = 'inset 0 0 80px rgba(239, 68, 68, 0.8)';
+    document.getElementById('globalStatus').innerText = 'E-STOP';
+    document.getElementById('globalStatus').className = 'text-rose-400 font-bold';
+    v3Log('SAFETY: E-STOP TRIPPED. All drives killed.', 'ERROR');
+  } else {
+    btn.classList.remove('latched');
+    document.body.style.boxShadow = '';
+    document.getElementById('globalStatus').innerText = 'READY';
+    document.getElementById('globalStatus').className = 'text-emerald-400 font-bold';
+    v3Log('SAFETY: E-STOP reset. Drives enabled.', 'INFO');
+  }
+}
+
+// ============================================================================
+// VIEW 2: 3D SIMULATION
+// ============================================================================
+function initV2() {
+  const container = document.getElementById('v2-viewport');
+  if (!container) return;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 50000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setClearColor(0x070a0f, 1);
+  container.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  camera.position.set(2000, 1800, 2000);
+  camera.lookAt(1200, 0, 600);
+  controls.target.set(1200, 0, 600);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const dl = new THREE.DirectionalLight(0xffb833, 0.8); dl.position.set(1000, 2000, 1000); scene.add(dl);
+  
+  const bed = new THREE.Mesh(new THREE.BoxGeometry(120 * 25.4, 2 * 25.4, 60 * 25.4), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 }));
+  bed.position.set(60 * 25.4, -25.4, 30 * 25.4); scene.add(bed);
+
+  const gantry = new THREE.Group();
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(10 * 25.4, 8 * 25.4, 52 * 25.4), new THREE.MeshStandardMaterial({ color: 0x2d3748, metalness: 0.6 }));
+  beam.position.set(0, 15 * 25.4, 24 * 25.4); gantry.add(beam);
+  const legGeo = new THREE.BoxGeometry(4 * 25.4, 15 * 25.4, 4 * 25.4);
+  const l1 = new THREE.Mesh(legGeo, beam.material); l1.position.set(-5 * 25.4, 7.5 * 25.4, 2 * 25.4); gantry.add(l1);
+  const l2 = new THREE.Mesh(legGeo, beam.material); l2.position.set(-5 * 25.4, 7.5 * 25.4, 46 * 25.4); gantry.add(l2);
+  scene.add(gantry);
+
+  const carriage = new THREE.Group();
+  const cMesh = new THREE.Mesh(new THREE.BoxGeometry(6 * 25.4, 6 * 25.4, 6 * 25.4), new THREE.MeshStandardMaterial({ color: 0x4a5568, metalness: 0.7 }));
+  carriage.add(cMesh);
+  gantry.add(carriage);
+
+  const spindle = new THREE.Group();
+  const bit = new THREE.Mesh(new THREE.CylinderGeometry(0.25 * 25.4, 0.25 * 25.4, 2.5 * 25.4, 12), new THREE.MeshStandardMaterial({ color: 0x00e5ff, metalness: 0.9, emissive: 0x00e5ff, emissiveIntensity: 0.3 }));
+  bit.position.y = -6.5 * 25.4; spindle.add(bit);
+  carriage.add(spindle);
+
+  const trail = new THREE.Group();
+  scene.add(trail);
+
+  const parts = [];
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.7 });
+  for(let i=0; i<4; i++) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(20*25.4, 0.75*25.4, 10*25.4), woodMat);
+    mesh.position.set((20 + i*25)*25.4, 0.375*25.4, (20 + (i%2)*15)*25.4);
+    mesh.userData = { id: 'P'+(i+1), cut: false, orig: mesh.position.clone(), target: new THREE.Vector3((120 + i*2)*25.4, (0.375 + i*0.8)*25.4, 30*25.4) };
+    scene.add(mesh);
+    parts.push(mesh);
+  }
+
+  State.v2.viewer = { scene, camera, renderer, controls, gantry, carriage, spindle, trail, parts };
+  
+  const gc = document.getElementById('v2-gcode');
+  if(gc) {
+    gc.innerHTML = '';
+    for(let i=1; i<=20; i++) {
+      const d = document.createElement('div');
+      d.className = 'gcode-line truncate';
+      d.id = 'v2-gl-'+i;
+      d.innerText = `N00${i.toString().padStart(2,'0')} G01 X${(i*5).toFixed(2)} Y${(i*2).toFixed(2)} F400`;
+      gc.appendChild(d);
+    }
+  }
+  State.v2.ops = Array.from({length: 20}, (_, i) => ({ line: i+1, x: (i+1)*5, y: (i+1)*2, z: -0.75 }));
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    
+    parts.forEach(p => {
+      if (p.userData.cut && p.position.x < p.userData.target.x) {
+        p.position.x += (p.userData.target.x - p.position.x) * 0.05;
+        p.position.y += (p.userData.target.y - p.position.y) * 0.05;
+        p.position.z += (p.userData.target.z - p.position.z) * 0.05;
+      }
+    });
+
+    if (State.v2.running && !State.v2.estopped) {
+      spindle.rotation.y += 0.6;
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+
+function v2Jog(axis, dir) {
+  if (!document.getElementById('v2-jog').checked || State.v2.running) return;
+  if (axis === 'X') State.v2.x += dir * 0.5;
+  if (axis === 'Y') State.v2.y += dir * 0.5;
+  if (axis === 'Z') State.v2.z += dir * 0.5;
+  v2UpdateDRO();
+}
+
+function v2Zero() { State.v2.x = 0; State.v2.y = 0; State.v2.z = 1; v2UpdateDRO(); }
+
+function v2UpdateDRO() {
+  const fmt = v => (v >= 0 ? '+' : '') + v.toFixed(3).padStart(7, '0');
+  document.getElementById('v2-droX').innerText = fmt(State.v2.x);
+  document.getElementById('v2-droY').innerText = fmt(State.v2.y);
+  document.getElementById('v2-droZ').innerText = fmt(State.v2.z);
+  if (State.v2.viewer) {
+    State.v2.viewer.gantry.position.set(State.v2.x * 25.4, 0, 0);
+    State.v2.viewer.carriage.position.set(0, 0, State.v2.y * 25.4);
+    State.v2.viewer.spindle.position.set(0, State.v2.z * 25.4, 0);
+  }
+}
+
+function v2Step(dir) {
+  if (State.v2.running || !State.v2.viewer) return;
+  State.v2.idx = Math.max(0, Math.min(State.v2.ops.length, State.v2.idx + dir));
+  if (State.v2.idx > 0) {
+    const op = State.v2.ops[State.v2.idx - 1];
+    State.v2.x = op.x; State.v2.y = op.y; State.v2.z = op.z;
+    v2UpdateDRO();
+    document.querySelectorAll('#v2-gcode .gcode-line').forEach(l => l.classList.remove('active', 'past'));
+    const curr = document.getElementById('v2-gl-' + op.line);
+    if (curr) { curr.classList.add('active'); curr.scrollIntoView({block: 'nearest'}); }
+    document.getElementById('v2-gline').innerText = 'N00' + op.line.toString().padStart(2, '0');
+    
+    const p = State.v2.viewer.parts.find(pt => pt.userData.id === 'P' + Math.ceil(op.line / 5));
+    if (p && !p.userData.cut) {
+      p.userData.cut = true;
+      v3Log('3D SIM: Part ' + p.userData.id + ' completed', 'SUCCESS');
+    }
+  }
+  const pct = Math.round((State.v2.idx / State.v2.ops.length) * 100);
+  document.getElementById('v2-progress').style.width = pct + '%';
+}
+
+function v2TogglePlay() {
+  if (!State.v2.viewer) return;
+  State.v2.running = !State.v2.running;
+  document.getElementById('v2-playIcon').innerText = State.v2.running ? 'pause' : 'play_arrow';
+  document.getElementById('v2-playText').innerText = State.v2.running ? 'PAUSE' : 'RUN';
+  const btn = document.getElementById('v2-cycleBtn');
+  if (State.v2.running) {
+    document.getElementById('v3-jobs').innerText = '1';
+    btn.classList.add('running');
+    v3Log('3D SIM: Cycle started', 'SUCCESS');
+    v2Run();
+  } else {
+    document.getElementById('v3-jobs').innerText = '0';
+    btn.classList.remove('running');
+    v3Log('3D SIM: Feed hold', 'WARN');
+  }
+}
+
+function v2Run() {
+  if (!State.v2.running || !State.v2.viewer) return;
+  if (State.v2.idx < State.v2.ops.length) {
+    v2Step(1);
+    setTimeout(v2Run, 200);
+  } else {
+    State.v2.running = false;
+    document.getElementById('v2-playIcon').innerText = 'play_arrow';
+    document.getElementById('v2-playText').innerText = 'RUN';
+    document.getElementById('v3-jobs').innerText = '0';
+    document.getElementById('v2-cycleBtn').classList.remove('running');
+  }
+}
+
+function v2Start() { 
+  State.v2.running = true; 
+  document.getElementById('v2-playIcon').innerText = 'pause'; 
+  document.getElementById('v2-playText').innerText = 'PAUSE'; 
+  document.getElementById('v3-jobs').innerText = '1'; 
+  document.getElementById('v2-cycleBtn').classList.add('running');
+  v3Log('3D SIM: CYCLE START', 'SUCCESS'); 
+  v2Run(); 
+}
+
+function v2Hold() { 
+  State.v2.running = false; 
+  document.getElementById('v2-playIcon').innerText = 'play_arrow'; 
+  document.getElementById('v2-playText').innerText = 'RUN'; 
+  document.getElementById('v3-jobs').innerText = '0'; 
+  document.getElementById('v2-cycleBtn').classList.remove('running');
+  v3Log('3D SIM: FEED HOLD', 'WARN'); 
+}
+
+function v2Stop() { 
+  v2Hold(); 
+  State.v2.idx = 0; 
+  State.v2.x=0; State.v2.y=0; State.v2.z=1; 
+  v2UpdateDRO(); 
+  document.getElementById('v2-progress').style.width = '0%'; 
+}
+
+function v2Rewind() { v2Stop(); }
+
+function v2Estop() {
+  State.v2.estopped = !State.v2.estopped;
+  State.v2.running = false;
+  const btn = document.getElementById('v2-estop');
+  if (State.v2.estopped) {
+    btn.classList.add('latched');
+    document.getElementById('v2-cycleBtn').classList.remove('running');
+    document.body.style.boxShadow = 'inset 0 0 80px rgba(239, 68, 68, 0.8)';
+    document.getElementById('globalStatus').innerText = 'E-STOP';
+    document.getElementById('globalStatus').className = 'text-rose-400 font-bold';
+    v3Log('SAFETY: 3D SIM E-STOP TRIPPED', 'ERROR');
+  } else {
+    btn.classList.remove('latched');
+    document.body.style.boxShadow = '';
+    document.getElementById('globalStatus').innerText = 'READY';
+    document.getElementById('globalStatus').className = 'text-emerald-400 font-bold';
+    v3Log('SAFETY: E-STOP reset', 'INFO');
+  }
+}
+
+// ============================================================================
+// VIEW 3: BACKEND
+// ============================================================================
+function v3Log(msg, type='INFO') {
+  const el = document.getElementById('v3-logs');
+  if (!el) return;
+  const time = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const color = type === 'ERROR' ? 'text-rose-400' : type === 'SUCCESS' ? 'text-emerald-400' : type === 'WARN' ? 'text-amber-400' : 'text-slate-400';
+  const div = document.createElement('div');
+  div.className = color + ' slide-in';
+  div.innerHTML = `<span class="text-slate-500">[${time}]</span> <span class="font-bold">[${type}]</span> ${msg}`;
+  el.appendChild(div);
+  while (el.children.length > 50) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+
+function v3Heartbeat() {
+  if (State.view !== 'v3' && State.v3.logs % 3 !== 0) return;
+  const msgs = ['MCP_GATEWAY: SSE stable', 'BOM_ENGINE: Sync complete', 'NESTING_CORE: Cache hit 98.2%', 'CNC_POST: Heartbeat OK', 'ATC: Carousel servo nominal'];
+  v3Log(msgs[Math.floor(Math.random() * msgs.length)], 'INFO');
+  State.v3.logs++;
+  
+  if (State.v2.viewer && State.v2.viewer.parts.length > 0) {
+     document.getElementById('v2-yield').innerText = '92.4%';
+     document.getElementById('v3-yield').innerText = '92.4%';
+  }
+}
+
+// ============================================================================
+// MDI CONSOLE
+// ============================================================================
+let consoleOpen = false;
+
+function toggleConsole() {
+  consoleOpen = !consoleOpen;
+  const el = document.getElementById('mdiConsole');
+  if (consoleOpen) {
+    el.classList.remove('translate-y-full');
+    setTimeout(() => document.getElementById('cmd-input').focus(), 400);
+  } else {
+    el.classList.add('translate-y-full');
+  }
+}
+
+function switchConsoleTab(tab) {
+  document.getElementById('panel-cmd').classList.toggle('hidden', tab !== 'cmd');
+  document.getElementById('panel-cfg').classList.toggle('hidden', tab !== 'cfg');
+  document.getElementById('tab-cmd').className = tab === 'cmd' ? 'px-3 py-1 text-[10px] font-bold text-white bg-cyan-600 rounded' : 'px-3 py-1 text-[10px] font-bold text-slate-400 rounded';
+  document.getElementById('tab-cfg').className = tab === 'cfg' ? 'px-3 py-1 text-[10px] font-bold text-white bg-cyan-600 rounded' : 'px-3 py-1 text-[10px] font-bold text-slate-400 rounded';
+}
+
+function executeMDI() {
+  const input = document.getElementById('cmd-input');
+  const output = document.getElementById('cmd-output');
+  const cmd = input.value.trim().toUpperCase();
+  if (!cmd) return;
+
+  output.innerHTML += `<div class="text-cyan-300 mt-1 cmd-flash">&gt; ${cmd}</div>`;
+  input.value = '';
+
+  if (cmd.match(/^T\d+$/)) {
+    const toolNum = parseInt(cmd.substring(1));
+    if (toolNum >= 1 && toolNum <= 8) {
+      selectTool(toolNum);
+      output.innerHTML += `<div class="text-emerald-400 slide-in">[OK] ATC: Tool T0${toolNum} loaded into spindle.</div>`;
+    } else {
+      output.innerHTML += `<div class="text-rose-400 slide-in">[ERR] ALARM 104: Tool T${toolNum} not in carousel.</div>`;
+    }
+  } 
+  else if (cmd === 'M88') {
+    document.getElementById('hud-resin').innerHTML = '12.5 <span class="text-[7px]">ml/m</span>';
+    output.innerHTML += `<div class="text-amber-400 slide-in">[ACT] M88: Thermo-Seal Resin Flow ENABLED.</div>`;
+    v3Log('MDI: M88 executed. Resin flow active.', 'INFO');
+  } 
+  else if (cmd === 'M89') {
+    document.getElementById('hud-resin').innerHTML = '0.0 <span class="text-[7px]">ml/m</span>';
+    output.innerHTML += `<div class="text-slate-400 slide-in">[ACT] M89: Resin Nozzle Purged & Sealed.</div>`;
+  } 
+  else if (cmd === 'M91') {
+    document.getElementById('hud-plasma').innerHTML = '85 <span class="text-[7px]">%</span>';
+    output.innerHTML += `<div class="text-purple-400 slide-in">[ACT] M91: Ultrasonic Plasma Arc IGNITED.</div>`;
+    v3Log('MDI: M91 executed. Plasma arc active.', 'WARN');
+  } 
+  else if (cmd === 'M92') {
+    document.getElementById('hud-plasma').innerHTML = '0 <span class="text-[7px]">%</span>';
+    output.innerHTML += `<div class="text-slate-400 slide-in">[ACT] M92: Plasma Extinguished.</div>`;
+  } 
+  else if (cmd.startsWith('G')) {
+    output.innerHTML += `<div class="text-emerald-400 slide-in">[OK] Buffer: ${cmd} queued for interpolation.</div>`;
+    v3Log(`MDI: Block ${cmd} queued.`, 'INFO');
+  } 
+  else {
+    output.innerHTML += `<div class="text-rose-400 slide-in">[ERR] SYNTAX ERROR: Unrecognized command '${cmd}'.</div>`;
+  }
+
+  output.scrollTop = output.scrollHeight;
+}
+
+function updateToolParam(type, value) {
+  if (type === 'resin') {
+    document.getElementById('hud-resin').innerHTML = `${parseFloat(value).toFixed(1)} <span class="text-[7px]">ml/m</span>`;
+    v3Log(`CONFIG: T04 Resin flow adjusted to ${value} ml/min`, 'INFO');
+  } 
+  else if (type === 'plasma') {
+    document.getElementById('hud-plasma').innerHTML = `${value} <span class="text-[7px]">%</span>`;
+    v3Log(`CONFIG: T05 Plasma duty cycle set to ${value}%`, 'INFO');
+  }
+  else if (type === 'camber') {
+    v3Log(`CONFIG: T07 SMA wire camber set to ${value}%`, 'INFO');
+  }
+  else if (type === 'ink') {
+    v3Log(`CONFIG: T08 Ink pressure set to ${value} PSI`, 'INFO');
+  }
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey && e.key === 'k') || e.key === '`') {
+    if (document.getElementById('startScreen').classList.contains('hidden')) {
+      e.preventDefault();
+      toggleConsole();
+    }
+  }
+});
+
+// ============================================================================
+// INIT
+// ============================================================================
+v3Log('System boot sequence initiated...', 'INFO');
+</script>
+</body>
+</html>
+```
+
+## 🎬 What's New in This Merged Version
+
+### **1. Complete Integration**
+- **All 8 tools** (T01–T08) in a scrollable carousel
+- **MDI Console** accessible via button or `` ` `` / `Ctrl+K` keyboard shortcut
+- **Tool Parameter sliders** for T04–T08 in the configurator tab
+- **Cross-view sync**: Tool changes update HUD, log to Backend, and animate the gantry
+
+### **2. New Animations Added**
+| Animation | Where | Effect |
+|-----------|-------|--------|
+| `scanlineDrift` | CRT overlay | Slow-moving retro scanlines |
+| `shimmer` | Buttons | Light sweep on hover |
+| `glowPulse` | Active LEDs | Pulsing glow effect |
+| `slideIn` | Log entries | Logs slide in from left |
+| `viewFade` | View transitions | Smooth scale+fade when switching views |
+| `toolActivate` | Tool slots | Scale bounce when tool loads |
+| `lineFlash` | G-code active line | Amber flash on line change |
+| `dashFlow` | SVG cut path | Animated kerf line |
+| `rotateSlow` | Spark suction ring | Spinning vacuum halo |
+| `cycleGlow` | Cycle Start button | Pulsing green glow when running |
+| `progressShimmer` | Progress bars | Shimmer sweep on progress |
+| `numTick` | HUD numbers | Number tick-up animation |
+| `cmdFlash` | MDI commands | Cyan flash on command entry |
+| `bootFlicker` | Boot screen | Terminal flicker effect |
+| `sawdust` | Particle system | Physics-based chip ejection |
+| `latched` | E-Stop | Visual depression when tripped |
+
+### **3. Enhanced Features**
+- **Tool-specific HUD metrics** (Resin Flow, Plasma Duty) update dynamically when tools are selected
+- **E-Stop now visually latches** with depressed state and red screen tint
+- **Keyboard shortcuts**: `` ` `` or `Ctrl+K` opens MDI console
+- **Backend logs** receive events from every action (tool changes, MDI commands, cycle starts)
+- **Smooth view transitions** with scale animation
+
+Save as `index.html` and open in any modern browser — everything is self-contained and ready to run! 🚀
